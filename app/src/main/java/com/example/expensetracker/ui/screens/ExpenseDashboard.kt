@@ -15,23 +15,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.expensetracker.database.Transaction
-import com.example.expensetracker.viewmodel.ExpenseViewModel
+import com.example.expensetracker.ExpenseViewModel
+import com.example.expensetracker.Transaction
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun ExpenseDashboard(viewModel: ExpenseViewModel) {
 
-    val transactions by viewModel.allTransactions.collectAsState(initial = emptyList())
-    val totalExpenses by viewModel.totalExpenses.collectAsState(initial = 0)
+    val transactions by viewModel.transactions.collectAsState()
+    val totalExpenses by viewModel.totalExpenses.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showDialog = true }
-            ) {
+            FloatingActionButton(onClick = { showDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
             }
         }
@@ -42,48 +40,32 @@ fun ExpenseDashboard(viewModel: ExpenseViewModel) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            Text(
-                text = "Expense Tracker",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
-
+            Text("Expense Tracker", fontSize = 30.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(20.dp))
 
             // Balance Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
-            ) {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
                 Column(
                     modifier = Modifier
                         .background(Color(0xFF6750A4))
                         .padding(24.dp)
                 ) {
-                    Text("Total Expenses", color = Color.White, fontSize = 14.sp)
+                    Text("Total Expenses", color = Color.White)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "₹${totalExpenses ?: 0}",
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    Text("₹$totalExpenses", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-
             Text("Recent Transactions", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(10.dp))
 
             if (transactions.isEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("No transactions yet", color = Color.Gray)
-                }
+                Text("No transactions yet", color = Color.Gray)
             } else {
                 LazyColumn {
                     items(transactions) { transaction ->
-                        TransactionItem(transaction) { viewModel.deleteTransaction(transaction) }
+                        TransactionCard(transaction) { viewModel.deleteTransaction(transaction) }
                     }
                 }
             }
@@ -91,7 +73,7 @@ fun ExpenseDashboard(viewModel: ExpenseViewModel) {
     }
 
     if (showDialog) {
-        AddTransactionDialog(
+        AddDialog(
             onDismiss = { showDialog = false },
             onAdd = { title, amount, category ->
                 viewModel.addTransaction(title, amount, category)
@@ -102,7 +84,7 @@ fun ExpenseDashboard(viewModel: ExpenseViewModel) {
 }
 
 @Composable
-fun TransactionItem(transaction: Transaction, onDelete: () -> Unit) {
+fun TransactionCard(transaction: Transaction, onDelete: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -119,11 +101,7 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(transaction.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(transaction.category, color = Color.Gray, fontSize = 12.sp)
-                Text(
-                    formatDate(transaction.timestamp),
-                    color = Color.Gray,
-                    fontSize = 10.sp
-                )
+                Text(formatDate(transaction.timestamp), color = Color.Gray, fontSize = 10.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("₹${transaction.amount}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -136,75 +114,39 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit) {
 }
 
 @Composable
-fun AddTransactionDialog(onDismiss: () -> Unit, onAdd: (String, Int, String) -> Unit) {
+fun AddDialog(onDismiss: () -> Unit, onAdd: (String, Int, String) -> Unit) {
     var title by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Shopping") }
-
-    val categories = listOf("Food", "Transport", "Shopping", "Entertainment", "Other")
-    var expandedCategory by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Transaction") },
         text = {
-            Column(modifier = Modifier.padding(8.dp)) {
-                TextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                TextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("Amount") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Box {
-                    Button(onClick = { expandedCategory = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(category)
-                    }
-                    DropdownMenu(expanded = expandedCategory, onDismissRequest = { expandedCategory = false }) {
-                        categories.forEach { cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat) },
-                                onClick = {
-                                    category = cat
-                                    expandedCategory = false
-                                }
-                            )
-                        }
-                    }
-                }
+            Column {
+                TextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(value = amount, onValueChange = { amount = it }, label = { Text("Amount") }, modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(value = category, onValueChange = { category = it }, label = { Text("Category") }, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    if (title.isNotBlank() && amount.isNotBlank()) {
-                        onAdd(title, amount.toInt(), category)
-                    }
+            Button(onClick = {
+                if (title.isNotBlank() && amount.isNotBlank()) {
+                    onAdd(title, amount.toInt(), category)
                 }
-            ) {
+            }) {
                 Text("Add")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
 
-private fun formatDate(timestamp: Long): String {
+fun formatDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault())
     return sdf.format(Date(timestamp))
 }
