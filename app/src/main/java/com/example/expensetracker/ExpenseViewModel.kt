@@ -1,41 +1,62 @@
 package com.example.expensetracker
 
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
-class ExpenseViewModel : ViewModel() {
+class ExpenseViewModel(application: Application) : AndroidViewModel(application) {
 
-    private var nextId = 1
+    private val repository: TransactionRepository
+    val allTransactions: Flow<List<Transaction>>
+    val totalExpenses: Flow<Int?>
+    val allCategories: Flow<List<Category>>
 
-    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
-    val transactions: StateFlow<List<Transaction>> = _transactions
+    init {
+        val db = AppDatabase.getDatabase(application)
+        val transactionDao = db.transactionDao()
+        val categoryDao = db.categoryDao()
+        val merchantMappingDao = db.merchantMappingDao()
 
-    private val _totalExpenses = MutableStateFlow(0)
-    val totalExpenses: StateFlow<Int> = _totalExpenses
+        repository = TransactionRepository(transactionDao, categoryDao, merchantMappingDao)
+        allTransactions = repository.allTransactions
+        totalExpenses = repository.totalExpenses
+        allCategories = repository.allCategories
+    }
 
-    fun addTransaction(title: String, amount: Int, category: String) {
-        val newTransaction = Transaction(
-            id = nextId++,
-            title = title,
-            amount = amount,
-            category = category
-        )
-        val currentList = _transactions.value.toMutableList()
-        currentList.add(0, newTransaction)
-        _transactions.value = currentList
-        updateTotal()
+    fun addTransaction(title: String, amount: Int, category: String, paymentMethod: String = "Cash") {
+        viewModelScope.launch(Dispatchers.IO) {
+            val transaction = Transaction(
+                title = title,
+                amount = amount,
+                category = category,
+                paymentMethod = paymentMethod
+            )
+            repository.insertTransaction(transaction)
+        }
     }
 
     fun deleteTransaction(transaction: Transaction) {
-        val currentList = _transactions.value.toMutableList()
-        currentList.remove(transaction)
-        _transactions.value = currentList
-        updateTotal()
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteTransaction(transaction)
+        }
     }
 
-    private fun updateTotal() {
-        _totalExpenses.value = _transactions.value.sumOf { it.amount }
+    fun getTotalByPaymentMethod(method: String): Flow<Int?> {
+        return repository.getTotalByPaymentMethod(method)
+    }
+
+    fun getTransactionsByCategory(category: String): Flow<List<Transaction>> {
+        return repository.getTransactionsByCategory(category)
+    }
+
+    fun getCategoryIdByKeyword(keyword: String): Int? {
+        return repository.getCategoryIdByKeyword(keyword)
+    }
+
+    fun getConfidenceByKeyword(keyword: String): Int? {
+        return repository.getConfidenceByKeyword(keyword)
     }
 }
