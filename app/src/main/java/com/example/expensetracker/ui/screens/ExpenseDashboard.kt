@@ -23,8 +23,8 @@ import java.util.*
 @Composable
 fun ExpenseDashboard(viewModel: ExpenseViewModel) {
 
-    val transactions by viewModel.transactions.collectAsState()
-    val totalExpenses by viewModel.totalExpenses.collectAsState()
+    val transactions by viewModel.allTransactions.collectAsState(initial = emptyList())
+    val totalExpenses by viewModel.totalExpenses.collectAsState(initial = 0)
     var showDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -52,7 +52,7 @@ fun ExpenseDashboard(viewModel: ExpenseViewModel) {
                 ) {
                     Text("Total Expenses", color = Color.White)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("₹$totalExpenses", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("₹${totalExpenses ?: 0}", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
 
@@ -75,8 +75,8 @@ fun ExpenseDashboard(viewModel: ExpenseViewModel) {
     if (showDialog) {
         AddDialog(
             onDismiss = { showDialog = false },
-            onAdd = { title, amount, category ->
-                viewModel.addTransaction(title, amount, category)
+            onAdd = { title, amount, category, paymentMethod ->
+                viewModel.addTransaction(title, amount, category, paymentMethod)
                 showDialog = false
             }
         )
@@ -100,7 +100,7 @@ fun TransactionCard(transaction: Transaction, onDelete: () -> Unit) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(transaction.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(transaction.category, color = Color.Gray, fontSize = 12.sp)
+                Text("${transaction.category} • ${transaction.paymentMethod}", color = Color.Gray, fontSize = 12.sp)
                 Text(formatDate(transaction.timestamp), color = Color.Gray, fontSize = 10.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -114,10 +114,16 @@ fun TransactionCard(transaction: Transaction, onDelete: () -> Unit) {
 }
 
 @Composable
-fun AddDialog(onDismiss: () -> Unit, onAdd: (String, Int, String) -> Unit) {
+fun AddDialog(onDismiss: () -> Unit, onAdd: (String, Int, String, String) -> Unit) {
     var title by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Shopping") }
+    var paymentMethod by remember { mutableStateOf("Cash") }
+
+    val categories = listOf("Food", "Transport", "Shopping", "Entertainment", "Bills", "Other")
+    val paymentMethods = listOf("Cash", "Card", "UPI", "Bank Transfer")
+    var expandedCategory by remember { mutableStateOf(false) }
+    var expandedPayment by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -126,17 +132,56 @@ fun AddDialog(onDismiss: () -> Unit, onAdd: (String, Int, String) -> Unit) {
             Column {
                 TextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
                 Spacer(modifier = Modifier.height(8.dp))
+
                 TextField(value = amount, onValueChange = { amount = it }, label = { Text("Amount") }, modifier = Modifier.fillMaxWidth())
                 Spacer(modifier = Modifier.height(8.dp))
-                TextField(value = category, onValueChange = { category = it }, label = { Text("Category") }, modifier = Modifier.fillMaxWidth())
+
+                // Category dropdown
+                Box {
+                    Button(onClick = { expandedCategory = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(category)
+                    }
+                    DropdownMenu(expanded = expandedCategory, onDismissRequest = { expandedCategory = false }) {
+                        categories.forEach { cat ->
+                            DropdownMenuItem(
+                                text = { Text(cat) },
+                                onClick = {
+                                    category = cat
+                                    expandedCategory = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Payment Method dropdown
+                Box {
+                    Button(onClick = { expandedPayment = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(paymentMethod)
+                    }
+                    DropdownMenu(expanded = expandedPayment, onDismissRequest = { expandedPayment = false }) {
+                        paymentMethods.forEach { method ->
+                            DropdownMenuItem(
+                                text = { Text(method) },
+                                onClick = {
+                                    paymentMethod = method
+                                    expandedPayment = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
-            Button(onClick = {
-                if (title.isNotBlank() && amount.isNotBlank()) {
-                    onAdd(title, amount.toInt(), category)
+            Button(
+                onClick = {
+                    if (title.isNotBlank() && amount.isNotBlank()) {
+                        onAdd(title, amount.toInt(), category, paymentMethod)
+                    }
                 }
-            }) {
+            ) {
                 Text("Add")
             }
         },
