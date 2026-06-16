@@ -178,7 +178,14 @@ fun AddDialog(onDismiss: () -> Unit, onAdd: (String, Int, String, String) -> Uni
             Button(
                 onClick = {
                     if (title.isNotBlank() && amount.isNotBlank()) {
-                        onAdd(title, amount.toInt(), category, paymentMethod)
+                        try {
+                            val amountInt = amount.toInt()
+                            if (amountInt > 0) {
+                                onAdd(title, amountInt, category, paymentMethod)
+                            }
+                        } catch (e: NumberFormatException) {
+                            // Invalid number, do nothing
+                        }
                     }
                 }
             ) {

@@ -21,9 +21,9 @@ interface TransactionDao {
     @Query("SELECT SUM(amount) FROM transactions")
     fun getTotalExpenses(): Flow<Int?>
 
-    @Query("SELECT * FROM transactions WHERE category = :category ORDER BY timestamp DESC")
-    fun getTransactionsByCategory(category: String): Flow<List<Transaction>>
+    @Query("SELECT * FROM transactions WHERE category = :categoryName ORDER BY timestamp DESC")
+    fun getTransactionsByCategory(categoryName: String): Flow<List<Transaction>>
 
-    @Query("SELECT SUM(amount) FROM transactions WHERE paymentMethod = :method")
-    fun getTotalByPaymentMethod(method: String): Flow<Int?>
+    @Query("SELECT SUM(amount) FROM transactions WHERE paymentMethod = :paymentMethod")
+    fun getTotalByPaymentMethod(paymentMethod: String): Flow<Int?>
 }
