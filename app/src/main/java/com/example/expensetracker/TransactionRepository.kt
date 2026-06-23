@@ -17,6 +17,10 @@ class TransactionRepository(
         transactionDao.insertTransaction(transaction)
     }
 
+    fun updateTransaction(transaction: Transaction) {
+        transactionDao.updateTransaction(transaction)
+    }
+
     fun deleteTransaction(transaction: Transaction) {
         transactionDao.deleteTransaction(transaction)
     }
@@ -35,6 +39,14 @@ class TransactionRepository(
 
     fun deleteCategory(category: Category) {
         categoryDao.deleteCategory(category)
+    }
+
+    fun getAllCategoriesSync(): List<Category> {
+        return categoryDao.getAllCategoriesSync()
+    }
+
+    fun getCategoryByName(name: String): Category? {
+        return categoryDao.getCategoryByName(name)
     }
 
     fun getDefaultCategories(): Flow<List<Category>> {

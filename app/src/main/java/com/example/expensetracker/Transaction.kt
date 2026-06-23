@@ -13,5 +13,7 @@ data class Transaction(
     val timestamp: Long = System.currentTimeMillis(),
     val paymentMethod: String = "Cash",
     val source: String = "manual",
-    val phoneNumber: String = ""
+    val phoneNumber: String = "",
+    val bankName: String = "",
+    val bankLast4: String = ""
 )

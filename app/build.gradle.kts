@@ -38,6 +38,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs = freeCompilerArgs + "-java-parameters"
     }
 
     buildFeatures {

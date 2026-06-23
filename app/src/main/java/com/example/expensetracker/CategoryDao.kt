@@ -26,4 +26,10 @@ interface CategoryDao {
 
     @Query("SELECT * FROM categories WHERE id = :id")
     fun getCategoryById(id: Int): Category?
+
+    @Query("SELECT * FROM categories ORDER BY name ASC")
+    fun getAllCategoriesSync(): List<Category>
+
+    @Query("SELECT * FROM categories WHERE LOWER(name) = LOWER(:name) LIMIT 1")
+    fun getCategoryByName(name: String): Category?
 }
