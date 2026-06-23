@@ -9,7 +9,6 @@ import com.example.expensetracker.AppDatabase
 import com.example.expensetracker.Transaction
 import com.example.expensetracker.Category
 import com.example.expensetracker.LogManager
-import com.example.expensetracker.LocalRegexParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,7 +17,6 @@ import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
-import androidx.core.app.NotificationCompat
 
 class NotificationListener : NotificationListenerService() {
 
@@ -41,20 +39,18 @@ class NotificationListener : NotificationListenerService() {
         super.onNotificationPosted(sbn)
         
         val packageName = sbn.packageName ?: ""
+        // Keep this check to prevent processing notifications sent by your own app
         if (packageName == this.packageName) {
             return
         }
         
+        // Skip group summaries (bundle headers)
         if ((sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0) {
             return
         }
         
         val extras = sbn.notification.extras ?: android.os.Bundle()
         val title = extras.getString(Notification.EXTRA_TITLE)?.toString() ?: ""
-
-        if (!isValidSender(packageName, title)) {
-            return
-        }
 
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
         val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
@@ -65,7 +61,6 @@ class NotificationListener : NotificationListenerService() {
             bestText = bigText
         }
 
-        
         val messages = try {
             extras.get("android.messages") as? Array<*>
         } catch (e: Exception) {
@@ -106,7 +101,7 @@ class NotificationListener : NotificationListenerService() {
         } else if (bestText.isNotBlank()) {
             val uniqueKey = bestText
             if (!isNotificationDuplicate(uniqueKey)) {
-                LogManager.log("INFO", "Non-transaction SMS intercepted from $packageName. Title: \"$title\", Text: \"$bestText\"")
+                LogManager.log("INFO", "Non-transaction text intercepted from $packageName. Title: \"$title\", Text: \"$bestText\"")
             }
         }
     }
@@ -114,18 +109,6 @@ class NotificationListener : NotificationListenerService() {
     companion object {
         private const val TAG = "NotificationListener"
         var isServiceConnected = false
-
-        fun isValidSender(packageName: String, title: String): Boolean {
-            val isSmsApp = packageName.contains("messaging", ignoreCase = true) || 
-                           packageName.contains("mms", ignoreCase = true) || 
-                           packageName.contains("sms", ignoreCase = true)
-            if (!isSmsApp) return false
-
-            val senderId = title.trim()
-            return senderId.matches(Regex("^[a-zA-Z0-9\\-.]+$")) && 
-                   senderId.any { it.isLetter() } && 
-                   senderId.length >= 3
-        }
 
         private val processedMessageTimes = java.util.Collections.synchronizedMap(HashMap<String, Long>())
         private val processedKeysQueue = java.util.concurrent.ConcurrentLinkedQueue<String>()
@@ -150,14 +133,14 @@ class NotificationListener : NotificationListenerService() {
 
         suspend fun processNotificationWithAI(context: Context, messageText: String, apiKey: String) = withContext(Dispatchers.IO) {
             try {
-                LogManager.log("INFO", "SMS Transaction Notification intercepted: \"$messageText\"")
+                LogManager.log("INFO", "Transaction Notification intercepted: \"$messageText\"")
 
                 if (apiKey.isBlank()) {
-                    LogManager.log("ERROR", "Gemini API Key is missing. Cannot parse SMS via AI. Skipping.")
+                    LogManager.log("ERROR", "Gemini API Key is missing. Cannot parse text via AI. Skipping.")
                     return@withContext
                 }
 
-                LogManager.log("INFO", "Sending SMS notification to Gemini AI (API Key configured) for auto-categorization.")
+                LogManager.log("INFO", "Sending notification text to Gemini AI for auto-categorization.")
 
                 val prefs = context.getSharedPreferences("expense_tracker_prefs", Context.MODE_PRIVATE)
                 val modelName = prefs.getString("gemini_model", "gemini-1.5-flash") ?: "gemini-1.5-flash"
@@ -201,7 +184,7 @@ class NotificationListener : NotificationListenerService() {
                     if (existing == null) {
                         val newColor = Category.getBeautifulColorForCategory(finalCategory)
                         db.categoryDao().insertCategory(Category(name = finalCategory, color = newColor, isCustom = true))
-                        LogManager.log("INFO", "SMS auto-logged transaction created new category: $finalCategory with color $newColor")
+                        LogManager.log("INFO", "Auto-logged transaction created new category: $finalCategory with color $newColor")
                     }
 
                     val transaction = Transaction(
@@ -234,7 +217,7 @@ class NotificationListener : NotificationListenerService() {
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.doOutput = true
 
-                val systemInstruction = "You are a financial transaction assistant. Analyze this notification/message text and extract the expense transaction details. Return ONLY a single raw JSON object (no markdown, no backticks, no explanatory text) with these fields: 'title' (merchant/store/person paid, e.g. Amazon, Starbucks, etc.), 'amount' (integer amount paid), 'category' (strictly choose the best fitting category from the available categories: $categoriesList. If none of the available categories fit the transaction context reasonably, you can define/create a new custom category name. Use a short, single-word title-cased name like 'Medical', 'Travel', 'Education', 'Investment', etc. Do NOT use 'Other' if a more specific category fits or can be created), 'paymentMethod' (strictly one of: Cash, Card, UPI, Bank Transfer. Default to 'Cash' if not specified or unclear), 'bankName' (the name of the bank/payment app if mentioned, e.g. HDFC, SBI, Paytm, etc., or empty string if not found), 'bankLast4' (last 4 digits of the account/card if mentioned, e.g. 1234, or empty string if not found). If the message is not a debit/expense transaction, return an empty JSON object {}."
+                val systemInstruction = "You are a financial transaction assistant. Analyze this notification/message text and extract the expense transaction details. Return ONLY a single raw JSON object."
 
                 val jsonPayload = JSONObject().apply {
                     put("contents", org.json.JSONArray().put(
