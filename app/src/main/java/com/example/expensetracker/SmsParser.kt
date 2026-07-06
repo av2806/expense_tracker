@@ -52,9 +52,22 @@ object SmsParser {
         }
 
         // Extract amount using regex (₹XXX or Rs XXX or INR XXX)
-        val amountRegex = """(?:₹|Rs\.?|INR)\s*(\d+(?:,\d{3})*(?:\.\d{2})?)""".toRegex()
-        val amountMatch = amountRegex.find(smsText)
-        val amount = amountMatch?.groupValues?.get(1)?.replace(",", "")?.toIntOrNull()
+        // First try to find amount with currency symbols
+        val currencyRegex =
+            """(?:₹|Rs\.?|INR)\s*(\d+(?:,\d{3})*(?:\.\d{2})?)""".toRegex()
+
+// If not found, try standalone numbers (like "1000 debited")
+        val plainNumberRegex =
+            """\b(\d{2,})\b""".toRegex()
+
+        val amountMatch = currencyRegex.find(smsText)
+            ?: plainNumberRegex.find(smsText)
+
+        val amount = amountMatch
+            ?.groupValues
+            ?.get(1)
+            ?.replace(",", "")
+            ?.toIntOrNull()
 
         // Extract merchant name
         val merchantRegex = """(Swiggy|Amazon|Flipkart|Uber|Ola|Zomato|Zepto|Netflix|Spotify|ICICI|HDFC|Axis|SBI|Google Pay|PhonePe|Paytm|Wallet|Store|Shop|Instamart)""".toRegex(RegexOption.IGNORE_CASE)

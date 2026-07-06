@@ -46,7 +46,7 @@ class SmsReceiver : BroadcastReceiver() {
                 "Other"
             }
 
-            if (confidence > 80) {
+
                 val transaction = Transaction(
                     title = merchant,
                     amount = parsedSms.amount!!,
@@ -61,7 +61,7 @@ class SmsReceiver : BroadcastReceiver() {
                     "Transaction Detected",
                     "₹${parsedSms.amount} - $merchant ($categoryName) [Auto-added]"
                 )
-            }
+
         }
     }
 }

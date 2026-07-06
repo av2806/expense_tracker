@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.expensetracker.ui.screens.ExpenseDashboard
 import com.example.expensetracker.ui.theme.ExpenseTrackerTheme
+import android.os.Build
 
 class MainActivity : ComponentActivity() {
 
@@ -26,6 +27,7 @@ class MainActivity : ComponentActivity() {
 
         // Request SMS permissions
         requestSmsPermissions()
+        requestNotificationPermission()
 
         val viewModel = ViewModelProvider(
             this,
@@ -34,7 +36,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ExpenseTrackerTheme {
-                ExpenseDashboard(viewModel)
+                AppNavigation(viewModel)
             }
         }
     }
@@ -51,6 +53,18 @@ class MainActivity : ComponentActivity() {
 
         if (!allGranted) {
             smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
+        }
+    }
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions(
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    101
+                )
+            }
         }
     }
 }

@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [Transaction::class, Category::class, MerchantCategoryMapping::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "expense_tracker_database"
-                ).build()
+                ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
 
                 // Populate data on first run

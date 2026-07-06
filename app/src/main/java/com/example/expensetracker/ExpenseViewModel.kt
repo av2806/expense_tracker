@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateOf
 
 class ExpenseViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -13,6 +14,11 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     val allTransactions: Flow<List<Transaction>>
     val totalExpenses: Flow<Int?>
     val allCategories: Flow<List<Category>>
+    val categorySpending: Flow<List<CategorySpending>>
+
+    val dailySpending: Flow<List<DailySpending>>
+
+    val monthlySpending: Flow<List<MonthlySpending>>
 
     init {
         val db = AppDatabase.getDatabase(application)
@@ -24,9 +30,12 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         allTransactions = repository.allTransactions
         totalExpenses = repository.totalExpenses
         allCategories = repository.allCategories
+        categorySpending = repository.getCategorySpending()
+        dailySpending = repository.getDailySpending()
+        monthlySpending = repository.getMonthlySpending()
     }
 
-    fun addTransaction(title: String, amount: Int, category: String, paymentMethod: String = "Cash") {
+    fun addTransaction(title: String, amount: Int, category: String, paymentMethod: String = "UPI") {
         viewModelScope.launch(Dispatchers.IO) {
             val transaction = Transaction(
                 title = title,
@@ -58,5 +67,19 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
 
     fun getConfidenceByKeyword(keyword: String): Int? {
         return repository.getConfidenceByKeyword(keyword)
+    }
+    fun getTransactionById(id: Int): Transaction? {
+        return repository.getTransactionById(id)
+    }
+
+    fun updateTransaction(transaction: Transaction) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateTransaction(transaction)
+        }
+    }
+    var selectedTransaction = mutableStateOf<Transaction?>(null)
+
+    fun selectTransaction(transaction: Transaction) {
+        selectedTransaction.value = transaction
     }
 }

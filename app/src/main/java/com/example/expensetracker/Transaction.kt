@@ -11,7 +11,8 @@ data class Transaction(
     val amount: Int,
     val category: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val paymentMethod: String = "Cash",
+    val paymentMethod: String = "UPI",
     val source: String = "manual",
-    val phoneNumber: String = ""
+    val phoneNumber: String = "",
+    val notes: String = ""
 )

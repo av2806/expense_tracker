@@ -11,10 +11,19 @@ class TransactionRepository(
     val allTransactions: Flow<List<Transaction>> = transactionDao.getAllTransactions()
     val totalExpenses: Flow<Int?> = transactionDao.getTotalExpenses()
     val allCategories: Flow<List<Category>> = categoryDao.getAllCategories()
-    val allMerchantMappings: Flow<List<MerchantCategoryMapping>> = merchantMappingDao.getAllMappings()
+    val allMerchantMappings: Flow<List<MerchantCategoryMapping>> =
+        merchantMappingDao.getAllMappings()
 
     fun insertTransaction(transaction: Transaction) {
         transactionDao.insertTransaction(transaction)
+    }
+
+    fun updateTransaction(transaction: Transaction) {
+        transactionDao.updateTransaction(transaction)
+    }
+
+    fun getTransactionById(id: Int): Transaction? {
+        return transactionDao.getTransactionById(id)
     }
 
     fun deleteTransaction(transaction: Transaction) {
@@ -59,5 +68,17 @@ class TransactionRepository(
 
     fun updateMerchantMapping(mapping: MerchantCategoryMapping) {
         merchantMappingDao.updateMapping(mapping)
+    }
+
+    fun getCategorySpending(): Flow<List<CategorySpending>> {
+        return transactionDao.getCategorySpending()
+    }
+
+    fun getDailySpending(): Flow<List<DailySpending>> {
+        return transactionDao.getDailySpending()
+    }
+
+    fun getMonthlySpending(): Flow<List<MonthlySpending>> {
+        return transactionDao.getMonthlySpending()
     }
 }
