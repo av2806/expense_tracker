@@ -11,10 +11,26 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModelProvider
 import com.example.expensetracker.ui.screens.ExpenseDashboard
 import com.example.expensetracker.ui.theme.ExpenseTrackerTheme
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+
 
 class MainActivity : ComponentActivity() {
 
     private var transactionsToExport: List<Transaction> = emptyList()
+    private val smsPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+
+            if (isGranted) {
+                LogManager.log(
+                    "SMS",
+                    "SMS permission granted"
+                )
+            }
+        }
 
     private val exportCsvLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         uri?.let {
@@ -31,6 +47,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestSmsPermissions()
 
         val viewModel = ViewModelProvider(this).get(ExpenseViewModel::class.java)
 
@@ -50,6 +67,25 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+        }
+    }
+    private fun requestSmsPermissions() {
+        val permissions = arrayOf(
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_SMS
+        )
+
+        val allGranted = permissions.all {
+            ContextCompat.checkSelfPermission(
+                this,
+                it
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        if (!allGranted) {
+            smsPermissionLauncher.launch(
+                Manifest.permission.RECEIVE_SMS
+            )
         }
     }
 }
